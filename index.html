@@ -1,0 +1,254 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="styles.css">
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css" rel="stylesheet">
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+</head>
+<body>
+    <div class="container">
+        <!-- Barra de Ações -->
+        <div class="action-bar">
+            <button id="addTransactionBtn" class="btn btn-primary">
+                <i class="fas fa-plus"></i> Nova Transação
+            </button>
+        </div>
+
+        <!-- Resumo Financeiro -->
+        <section class="summary-section">
+            <div class="summary-card income">
+                <div class="summary-icon">
+                    <i class="fas fa-arrow-up"></i>
+                </div>
+                <div class="summary-content">
+                    <h3>Receitas Totais <i class="fas fa-info-circle tooltip-trigger" data-tooltip="Total de dinheiro que entrou neste mês"></i></h3>
+                    <p class="summary-amount" id="totalIncome">R$ 0,00</p>
+                    <small class="summary-subtitle">Este mês</small>
+                </div>
+            </div>
+            
+            <div class="summary-card expense">
+                <div class="summary-icon">
+                    <i class="fas fa-arrow-down"></i>
+                </div>
+                <div class="summary-content">
+                    <h3>Despesas Totais <i class="fas fa-info-circle tooltip-trigger" data-tooltip="Total de dinheiro gasto neste mês"></i></h3>
+                    <p class="summary-amount" id="totalExpense">R$ 0,00</p>
+                    <small class="summary-subtitle">Este mês</small>
+                </div>
+            </div>
+            
+            <div class="summary-card salary">
+                <div class="summary-icon">
+                    <i class="fas fa-hand-holding-dollar"></i>
+                </div>
+                <div class="summary-content">
+                    <h3>Salário Recebido <i class="fas fa-info-circle tooltip-trigger" data-tooltip="Apenas receitas categorizadas como 'Salário'"></i></h3>
+                    <p class="summary-amount" id="totalSalary">R$ 0,00</p>
+                    <small class="summary-subtitle">Este mês</small>
+                </div>
+            </div>
+            
+            <div class="summary-card balance">
+                <div class="summary-icon">
+                    <i class="fas fa-piggy-bank"></i>
+                </div>
+                <div class="summary-content">
+                    <h3>Saldo Disponível <i class="fas fa-info-circle tooltip-trigger" data-tooltip="Salário menos despesas - valor disponível para investimentos"></i></h3>
+                    <p class="summary-amount" id="availableBalance">R$ 0,00</p>
+                    <small class="summary-subtitle">Para investir</small>
+                </div>
+            </div>
+        </section>
+
+        <!-- Estatísticas Rápidas -->
+        <section class="quick-stats">
+            <div class="stats-container">
+                <div class="stat-item">
+                    <div class="stat-icon">
+                        <i class="fas fa-calendar-day"></i>
+                    </div>
+                    <div class="stat-content">
+                        <span class="stat-label">Gasto Médio Diário</span>
+                        <span class="stat-value" id="dailyAverage">R$ 0,00</span>
+                    </div>
+                </div>
+                
+                <div class="stat-item">
+                    <div class="stat-icon">
+                        <i class="fas fa-shopping-cart"></i>
+                    </div>
+                    <div class="stat-content">
+                        <span class="stat-label">Maior Gasto</span>
+                        <span class="stat-value" id="highestExpense">R$ 0,00</span>
+                    </div>
+                </div>
+                
+                <div class="stat-item">
+                    <div class="stat-icon">
+                        <i class="fas fa-tags"></i>
+                    </div>
+                    <div class="stat-content">
+                        <span class="stat-label">Categoria + Gasta</span>
+                        <span class="stat-value" id="topCategory">-</span>
+                    </div>
+                </div>
+                
+                <div class="stat-item">
+                    <div class="stat-icon">
+                        <i class="fas fa-receipt"></i>
+                    </div>
+                    <div class="stat-content">
+                        <span class="stat-label">Total Transações</span>
+                        <span class="stat-value" id="totalTransactions">0</span>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- Seção de Investimentos -->
+        <section class="investment-section" id="investmentSection" style="display: none;">
+            <div class="investment-container">
+                <div class="investment-header">
+                    <h2><i class="fas fa-chart-line"></i> Sugestões de Investimento</h2>
+                    <p>Com base no seu saldo disponível, aqui estão algumas opções:</p>
+                </div>
+                <div class="investment-options" id="investmentOptions">
+                    <!-- Opções serão geradas dinamicamente -->
+                </div>
+            </div>
+        </section>
+
+        <!-- Filtros -->
+        <section class="filters-section">
+            <div class="filters">
+                <select id="categoryFilter">
+                    <option value="">Todas as categorias</option>
+                </select>
+                
+                <select id="typeFilter">
+                    <option value="">Todos os tipos</option>
+                    <option value="income">Receitas</option>
+                    <option value="expense">Despesas</option>
+                </select>
+                
+                <input type="month" id="monthFilter">
+                
+                <button id="clearFilters" class="btn btn-secondary">
+                    <i class="fas fa-eraser"></i> Limpar Filtros
+                </button>
+            </div>
+        </section>
+
+        <!-- Gráficos -->
+        <section class="charts-section">
+            <div class="chart-container">
+                <h3>Gastos por Categoria</h3>
+                <div class="chart-loading" id="categoryLoading">
+                    <i class="fas fa-spinner fa-spin"></i>
+                    <p>Carregando dados...</p>
+                </div>
+                <canvas id="categoryChart" style="display: none;"></canvas>
+            </div>
+            
+            <div class="chart-container">
+                <h3>Receitas vs Despesas (Últimos 6 meses)</h3>
+                <div class="chart-loading" id="monthlyLoading">
+                    <i class="fas fa-spinner fa-spin"></i>
+                    <p>Carregando dados...</p>
+                </div>
+                <canvas id="monthlyChart" style="display: none;"></canvas>
+            </div>
+        </section>
+
+        <!-- Lista de Transações -->
+        <section class="transactions-section">
+            <div class="section-header">
+                <h2>Transações Recentes</h2>
+                <div class="transaction-summary">
+                    <span id="transactionCount">0 transações</span>
+                </div>
+            </div>
+            
+            <div class="transactions-list" id="transactionsList">
+                <div class="no-transactions">
+                    <i class="fas fa-receipt"></i>
+                    <p>Nenhuma transação encontrada</p>
+                    <p>Adicione sua primeira transação clicando no botão "Nova Transação"</p>
+                </div>
+            </div>
+        </section>
+    </div>
+
+    <!-- Modal para Nova Transação -->
+    <div id="transactionModal" class="modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h2 id="modalTitle">Nova Transação</h2>
+                <span class="close">&times;</span>
+            </div>
+            
+            <div class="form-progress">
+                <div class="progress-bar" id="formProgress"></div>
+            </div>
+            
+            <form id="transactionForm">
+                <div class="form-group">
+                    <label for="transactionType">Tipo: <span class="required">*</span></label>
+                    <select id="transactionType" required>
+                        <option value="">Selecione o tipo</option>
+                        <option value="income">Receita</option>
+                        <option value="expense">Despesa</option>
+                    </select>
+                    <div class="error-message">Por favor, selecione um tipo</div>
+                </div>
+                
+                <div class="form-group">
+                    <label for="transactionAmount">Valor (R$): <span class="required">*</span></label>
+                    <input type="number" id="transactionAmount" step="0.01" min="0" required placeholder="0,00">
+                    <div class="error-message">Por favor, insira um valor válido</div>
+                </div>
+                
+                <div class="form-group">
+                    <label for="transactionCategory">Categoria: <span class="required">*</span></label>
+                    <select id="transactionCategory" required>
+                        <option value="">Selecione a categoria</option>
+                    </select>
+                    <div class="error-message">Por favor, selecione uma categoria</div>
+                </div>
+                
+                <div class="form-group">
+                    <label for="transactionDescription">Descrição: <span class="required">*</span></label>
+                    <input type="text" id="transactionDescription" maxlength="100" required placeholder="Ex: Compra no supermercado">
+                    <div class="error-message">Por favor, adicione uma descrição</div>
+                </div>
+                
+                <div class="form-group">
+                    <label for="transactionDate">Data: <span class="required">*</span></label>
+                    <input type="date" id="transactionDate" required>
+                    <div class="error-message">Por favor, selecione uma data</div>
+                </div>
+                
+                <div class="form-actions">
+                    <button type="button" class="btn btn-secondary" id="cancelBtn">Cancelar</button>
+                    <button type="submit" class="btn btn-primary">
+                        <i class="fas fa-save"></i> Salvar
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- Botão Voltar ao Topo -->
+    <button id="backToTop" class="back-to-top" style="display: none;">
+        <i class="fas fa-chevron-up"></i>
+    </button>
+
+    <script src="script.js"></script>
+</body>
+</html>

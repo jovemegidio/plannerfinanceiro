@@ -1,0 +1,200 @@
+[
+  {
+    "id": "1728234567890",
+    "type": "income",
+    "amount": 5500,
+    "category": "Salário",
+    "description": "Salário mensal - Outubro",
+    "date": "2025-10-01",
+    "createdAt": "2025-10-01T08:00:00.000Z"
+  },
+  {
+    "id": "1728234567891",
+    "type": "expense",
+    "amount": 1200,
+    "category": "Moradia",
+    "description": "Aluguel do apartamento",
+    "date": "2025-10-05",
+    "createdAt": "2025-10-05T10:30:00.000Z"
+  },
+  {
+    "id": "1728234567892",
+    "type": "expense",
+    "amount": 180.50,
+    "category": "Alimentação",
+    "description": "Compras no supermercado",
+    "date": "2025-10-03",
+    "createdAt": "2025-10-03T16:45:00.000Z"
+  },
+  {
+    "id": "1728234567893",
+    "type": "expense",
+    "amount": 320,
+    "category": "Transporte",
+    "description": "Combustível + Manutenção do carro",
+    "date": "2025-10-05",
+    "createdAt": "2025-10-05T11:20:00.000Z"
+  },
+  {
+    "id": "1728234567894",
+    "type": "income",
+    "amount": 1200,
+    "category": "Freelance",
+    "description": "Projeto de consultoria empresarial",
+    "date": "2025-10-07",
+    "createdAt": "2025-10-07T14:00:00.000Z"
+  },
+  {
+    "id": "1728234567895",
+    "type": "expense",
+    "amount": 150,
+    "category": "Entretenimento",
+    "description": "Netflix + Spotify + Prime Video",
+    "date": "2025-10-08",
+    "createdAt": "2025-10-08T20:15:00.000Z"
+  },
+  {
+    "id": "1728234567896",
+    "type": "expense",
+    "amount": 95,
+    "category": "Academia",
+    "description": "Mensalidade da academia",
+    "date": "2025-10-10",
+    "createdAt": "2025-10-10T09:30:00.000Z"
+  },
+  {
+    "id": "1696234567896",
+    "type": "expense",
+    "amount": 180,
+    "category": "Saúde",
+    "description": "Consulta médica + exames",
+    "date": "2024-09-20",
+    "createdAt": "2024-09-20T09:30:00.000Z"
+  },
+  {
+    "id": "1696234567897",
+    "type": "expense",
+    "amount": 320,
+    "category": "Contas",
+    "description": "Conta de luz + internet + água",
+    "date": "2024-09-25",
+    "createdAt": "2024-09-25T15:45:00.000Z"
+  },
+  {
+    "id": "1696234567898",
+    "type": "income",
+    "amount": 200,
+    "category": "Vendas",
+    "description": "Venda de itens usados",
+    "date": "2024-09-28",
+    "createdAt": "2024-09-28T13:20:00.000Z"
+  },
+  {
+    "id": "1696234567899",
+    "type": "expense",
+    "amount": 150,
+    "category": "Roupas",
+    "description": "Compras de roupas para o trabalho",
+    "date": "2024-09-30",
+    "createdAt": "2024-09-30T17:00:00.000Z"
+  },
+  {
+    "id": "1696234567900",
+    "type": "income",
+    "amount": 4500,
+    "category": "Salário",
+    "description": "Salário mensal - Outubro",
+    "date": "2024-10-01",
+    "createdAt": "2024-10-01T08:00:00.000Z"
+  },
+  {
+    "id": "1696234567901",
+    "type": "expense",
+    "amount": 65.30,
+    "category": "Alimentação",
+    "description": "Almoço no restaurante",
+    "date": "2024-10-03",
+    "createdAt": "2024-10-03T13:15:00.000Z"
+  },
+  {
+    "id": "1696234567902",
+    "type": "expense",
+    "amount": 850,
+    "category": "Moradia",
+    "description": "Aluguel do apartamento",
+    "date": "2024-10-05",
+    "createdAt": "2024-10-05T10:30:00.000Z"
+  },
+  {
+    "id": "1696234567903",
+    "type": "expense",
+    "amount": 45,
+    "category": "Transporte",
+    "description": "Uber para reunião",
+    "date": "2024-10-08",
+    "createdAt": "2024-10-08T14:20:00.000Z"
+  },
+  {
+    "id": "1696234567904",
+    "type": "income",
+    "amount": 300,
+    "category": "Freelance",
+    "description": "Consultoria rápida",
+    "date": "2024-10-12",
+    "createdAt": "2024-10-12T16:45:00.000Z"
+  },
+  {
+    "id": "1696234567905",
+    "type": "expense",
+    "amount": 220,
+    "category": "Tecnologia",
+    "description": "Novo fone de ouvido",
+    "date": "2024-10-15",
+    "createdAt": "2024-10-15T11:30:00.000Z"
+  },
+  {
+    "id": "1696234567906",
+    "type": "expense",
+    "amount": 95.80,
+    "category": "Alimentação",
+    "description": "Compras no mercado",
+    "date": "2024-10-18",
+    "createdAt": "2024-10-18T18:20:00.000Z"
+  },
+  {
+    "id": "1696234567907",
+    "type": "expense",
+    "amount": 120,
+    "category": "Lazer",
+    "description": "Jantar em restaurante",
+    "date": "2024-10-22",
+    "createdAt": "2024-10-22T20:45:00.000Z"
+  },
+  {
+    "id": "1696234567908",
+    "type": "income",
+    "amount": 150,
+    "category": "Presente",
+    "description": "Presente de aniversário",
+    "date": "2024-10-25",
+    "createdAt": "2024-10-25T15:00:00.000Z"
+  },
+  {
+    "id": "1696234567909",
+    "type": "expense",
+    "amount": 280,
+    "category": "Educação",
+    "description": "Curso online de programação",
+    "date": "2024-10-28",
+    "createdAt": "2024-10-28T10:15:00.000Z"
+  },
+  {
+    "id": "1696234567910",
+    "type": "expense",
+    "amount": 340,
+    "category": "Contas",
+    "description": "Conta de luz + telefone + internet",
+    "date": "2024-10-30",
+    "createdAt": "2024-10-30T16:30:00.000Z"
+  }
+]

@@ -1,0 +1,28 @@
+{
+  "name": "planner-financeiro",
+  "version": "1.0.0",
+  "description": "Planner Financeiro — Sistema de Controle Financeiro Pessoal",
+  "private": true,
+  "scripts": {
+    "prebuild": "node build-dist.js",
+    "tauri": "tauri",
+    "tauri:dev": "tauri dev",
+    "tauri:build": "npm run prebuild && tauri build"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/jovemegidio/plannerfinanceiro.git"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "type": "commonjs",
+  "bugs": {
+    "url": "https://github.com/jovemegidio/plannerfinanceiro/issues"
+  },
+  "homepage": "https://github.com/jovemegidio/plannerfinanceiro#readme",
+  "devDependencies": {
+    "@tauri-apps/api": "^2.10.1",
+    "@tauri-apps/cli": "^2.10.0"
+  }
+}

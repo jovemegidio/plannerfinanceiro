@@ -1,0 +1,25 @@
+# Dependencies
+node_modules/
+
+# Build output
+dist/
+
+# Releases (binários grandes)
+releases/
+
+# Rust / Tauri build artifacts
+src-tauri/target/
+
+# OS files
+.DS_Store
+Thumbs.db
+
+# IDE
+.vscode/
+.idea/
+
+# Package lock
+package-lock.json
+
+# Logs
+*.log

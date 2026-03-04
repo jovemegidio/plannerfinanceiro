@@ -140,6 +140,10 @@ class FinanceController {
         document.getElementById('exportJsonBtn').addEventListener('click', () => this.exportData());
         document.getElementById('exportPdfBtn').addEventListener('click', () => this.exportPdf());
         document.getElementById('importBtn').addEventListener('click', () => this.triggerImport());
+        document.getElementById('importBankBtn').addEventListener('click', () => this.openBankImportModal());
+
+        // Bank Import
+        this.setupBankImport();
 
         // Dark mode
         document.getElementById('darkModeToggle').addEventListener('click', () => this.toggleDarkMode());
@@ -1299,6 +1303,405 @@ class FinanceController {
         this.saveBudgets();
         this.saveRecurring();
         this.saveCustomCategories();
+    }
+
+    // =============================================
+    // IMPORTAÇÃO DE EXTRATO BANCÁRIO (OFX/CSV)
+    // =============================================
+    setupBankImport() {
+        const dropzone = document.getElementById('importDropzone');
+        const fileInput = document.getElementById('bankFileInput');
+
+        dropzone.addEventListener('click', () => fileInput.click());
+        dropzone.addEventListener('dragover', (e) => { e.preventDefault(); dropzone.classList.add('dragover'); });
+        dropzone.addEventListener('dragleave', () => dropzone.classList.remove('dragover'));
+        dropzone.addEventListener('drop', (e) => {
+            e.preventDefault();
+            dropzone.classList.remove('dragover');
+            if (e.dataTransfer.files.length) this.processBankFile(e.dataTransfer.files[0]);
+        });
+        fileInput.addEventListener('change', (e) => {
+            if (e.target.files[0]) this.processBankFile(e.target.files[0]);
+            fileInput.value = '';
+        });
+
+        document.getElementById('importBackBtn').addEventListener('click', () => this.showBankImportStep(1));
+        document.getElementById('importConfirmBtn').addEventListener('click', () => this.confirmBankImport());
+        document.getElementById('importSelectAll').addEventListener('change', (e) => {
+            document.querySelectorAll('#importPreviewList input[type="checkbox"]').forEach(cb => cb.checked = e.target.checked);
+            this.updateImportSummary();
+        });
+    }
+
+    openBankImportModal() {
+        this.showBankImportStep(1);
+        this.parsedBankTransactions = [];
+        document.getElementById('bankImportModal').style.display = 'block';
+        document.body.style.overflow = 'hidden';
+    }
+
+    showBankImportStep(step) {
+        document.getElementById('importStep1').style.display = step === 1 ? 'block' : 'none';
+        document.getElementById('importStep2').style.display = step === 2 ? 'block' : 'none';
+    }
+
+    processBankFile(file) {
+        if (file.size > 5 * 1024 * 1024) {
+            this.showNotification('Arquivo muito grande (máx 5MB)', 'error');
+            return;
+        }
+
+        const ext = file.name.split('.').pop().toLowerCase();
+        if (!['ofx', 'csv'].includes(ext)) {
+            this.showNotification('Formato não suportado. Use .ofx ou .csv', 'error');
+            return;
+        }
+
+        const reader = new FileReader();
+        reader.onload = (e) => {
+            try {
+                let transactions;
+                if (ext === 'ofx') {
+                    transactions = this.parseOFX(e.target.result);
+                } else {
+                    transactions = this.parseCSV(e.target.result);
+                }
+
+                if (transactions.length === 0) {
+                    this.showNotification('Nenhuma transação encontrada no arquivo.', 'error');
+                    return;
+                }
+
+                this.parsedBankTransactions = transactions;
+                this.showBankImportPreview(file, transactions);
+            } catch (err) {
+                console.error('Erro ao processar arquivo:', err);
+                this.showNotification('Erro ao ler arquivo: ' + err.message, 'error');
+            }
+        };
+        reader.readAsText(file, 'UTF-8');
+    }
+
+    // ===== OFX Parser =====
+    parseOFX(content) {
+        const transactions = [];
+
+        // Encontrar todas as transações <STMTTRN>
+        const txnRegex = /<STMTTRN>([\s\S]*?)<\/STMTTRN>/gi;
+        let match;
+
+        while ((match = txnRegex.exec(content)) !== null) {
+            const block = match[1];
+
+            const getValue = (tag) => {
+                // Formato SGML: <TAG>valor\n  ou  Formato XML: <TAG>valor</TAG>
+                const r1 = new RegExp(`<${tag}>([^<\\r\\n]+)`, 'i');
+                const m = block.match(r1);
+                return m ? m[1].trim() : '';
+            };
+
+            const trnType = getValue('TRNTYPE');
+            const dateRaw = getValue('DTPOSTED');
+            const amountRaw = getValue('TRNAMT');
+            const memo = getValue('MEMO') || getValue('NAME') || 'Transação bancária';
+            const fitId = getValue('FITID');
+
+            if (!amountRaw) continue;
+
+            // Parse da data OFX: YYYYMMDD ou YYYYMMDDHHMMSS
+            let dateStr = '';
+            if (dateRaw.length >= 8) {
+                const y = dateRaw.substring(0, 4);
+                const m = dateRaw.substring(4, 6);
+                const d = dateRaw.substring(6, 8);
+                dateStr = `${y}-${m}-${d}`;
+            } else {
+                dateStr = new Date().toISOString().split('T')[0];
+            }
+
+            // Parse do valor (OFX usa ponto como decimal, negativo = despesa)
+            const amount = parseFloat(amountRaw.replace(',', '.'));
+            if (isNaN(amount) || amount === 0) continue;
+
+            const type = amount > 0 ? 'income' : 'expense';
+            const category = this.autoCategorize(memo, type);
+
+            transactions.push({
+                type,
+                amount: Math.abs(amount),
+                description: this.cleanDescription(memo),
+                date: dateStr,
+                category,
+                fitId: fitId || '',
+                originalMemo: memo,
+                selected: true
+            });
+        }
+
+        return transactions;
+    }
+
+    // ===== CSV Parser =====
+    parseCSV(content) {
+        const transactions = [];
+        const lines = content.split(/\r?\n/).filter(l => l.trim());
+        if (lines.length < 2) throw new Error('CSV vazio ou com apenas cabeçalho');
+
+        // Detectar separador
+        const header = lines[0];
+        const separator = header.includes(';') ? ';' : ',';
+        const cols = header.split(separator).map(c => c.trim().toLowerCase().replace(/"/g, ''));
+
+        // Mapear colunas
+        const dateCol = cols.findIndex(c => /data|date|dt|dtmov|dtoperacao/.test(c));
+        const descCol = cols.findIndex(c => /desc|descricao|descrição|historico|memo|name|lancamento|lançamento/.test(c));
+        const amountCol = cols.findIndex(c => /valor|amount|value|vlr|vl|montante/.test(c));
+        const creditCol = cols.findIndex(c => /credito|crédito|credit|entrada/.test(c));
+        const debitCol = cols.findIndex(c => /debito|débito|debit|saida|saída/.test(c));
+
+        if (dateCol === -1) throw new Error('Coluna de data não encontrada. Nomes aceitos: data, date, dtmov');
+        if (descCol === -1) throw new Error('Coluna de descrição não encontrada. Nomes aceitos: descricao, historico, memo');
+
+        const hasAmount = amountCol !== -1;
+        const hasCreditDebit = creditCol !== -1 || debitCol !== -1;
+
+        if (!hasAmount && !hasCreditDebit) {
+            throw new Error('Coluna de valor não encontrada. Nomes aceitos: valor, amount, credito, debito');
+        }
+
+        for (let i = 1; i < lines.length; i++) {
+            const parts = this.parseCSVLine(lines[i], separator);
+            if (parts.length <= Math.max(dateCol, descCol)) continue;
+
+            const dateRaw = (parts[dateCol] || '').trim().replace(/"/g, '');
+            const desc = (parts[descCol] || '').trim().replace(/"/g, '');
+
+            if (!dateRaw || !desc) continue;
+
+            // Parse da data (suporte DD/MM/YYYY, YYYY-MM-DD, DD-MM-YYYY)
+            const dateStr = this.parseFlexDate(dateRaw);
+            if (!dateStr) continue;
+
+            let amount = 0;
+            let type = 'expense';
+
+            if (hasAmount) {
+                const raw = (parts[amountCol] || '').trim().replace(/"/g, '');
+                amount = this.parseBRNumber(raw);
+                type = amount >= 0 ? 'income' : 'expense';
+                amount = Math.abs(amount);
+            } else {
+                const credit = this.parseBRNumber((parts[creditCol] || '').trim().replace(/"/g, ''));
+                const debit = this.parseBRNumber((parts[debitCol] || '').trim().replace(/"/g, ''));
+                if (credit > 0) { amount = credit; type = 'income'; }
+                else if (debit !== 0) { amount = Math.abs(debit); type = 'expense'; }
+            }
+
+            if (amount === 0) continue;
+
+            const category = this.autoCategorize(desc, type);
+
+            transactions.push({
+                type,
+                amount,
+                description: this.cleanDescription(desc),
+                date: dateStr,
+                category,
+                originalMemo: desc,
+                selected: true
+            });
+        }
+
+        return transactions;
+    }
+
+    // Parseia uma linha CSV respeitando campos com aspas
+    parseCSVLine(line, sep) {
+        const result = [];
+        let current = '';
+        let inQuotes = false;
+        for (let i = 0; i < line.length; i++) {
+            const ch = line[i];
+            if (ch === '"') { inQuotes = !inQuotes; continue; }
+            if (ch === sep && !inQuotes) { result.push(current); current = ''; continue; }
+            current += ch;
+        }
+        result.push(current);
+        return result;
+    }
+
+    // Parse flexível de datas brasileiras
+    parseFlexDate(raw) {
+        // YYYY-MM-DD
+        if (/^\d{4}-\d{2}-\d{2}$/.test(raw)) return raw;
+        // DD/MM/YYYY ou DD-MM-YYYY
+        const match = raw.match(/^(\d{1,2})[\/\-](\d{1,2})[\/\-](\d{4})$/);
+        if (match) {
+            const [, d, m, y] = match;
+            return `${y}-${m.padStart(2, '0')}-${d.padStart(2, '0')}`;
+        }
+        // DD/MM/YY
+        const match2 = raw.match(/^(\d{1,2})[\/\-](\d{1,2})[\/\-](\d{2})$/);
+        if (match2) {
+            const [, d, m, y] = match2;
+            const fullYear = parseInt(y) > 50 ? '19' + y : '20' + y;
+            return `${fullYear}-${m.padStart(2, '0')}-${d.padStart(2, '0')}`;
+        }
+        return null;
+    }
+
+    // Parse de número no formato brasileiro (1.234,56) ou americano (1,234.56)
+    parseBRNumber(str) {
+        if (!str) return 0;
+        str = str.trim().replace(/[R$\s]/g, '');
+        if (!str) return 0;
+        // Detectar formato brasileiro: se tem vírgula como último separador
+        if (/,\d{1,2}$/.test(str)) {
+            str = str.replace(/\./g, '').replace(',', '.');
+        } else {
+            str = str.replace(/,/g, '');
+        }
+        const num = parseFloat(str);
+        return isNaN(num) ? 0 : num;
+    }
+
+    // Limpar descrições de extratos bancários
+    cleanDescription(desc) {
+        return desc
+            .replace(/\s+/g, ' ')
+            .replace(/^\d+\s*-?\s*/, '')  // Remove IDs numéricos do início
+            .trim()
+            .substring(0, 100);
+    }
+
+    // ===== Auto-categorização por palavras-chave =====
+    autoCategorize(description, type) {
+        const desc = description.toLowerCase();
+
+        if (type === 'income') {
+            if (/sal[aá]rio|salario|folha|pgto\s+sal|holerite|vencimento/.test(desc)) return 'Salário';
+            if (/freelan|consult|projeto|servico|serviço/.test(desc)) return 'Freelance';
+            if (/dividendo|juros|rendiment|yield|fii|tesouro|cdb|lci|lca/.test(desc)) return 'Investimentos';
+            if (/venda|mercadolivre|shopee|olx/.test(desc)) return 'Vendas';
+            if (/aluguel|rent|locacao|locação/.test(desc)) return 'Aluguel Recebido';
+            if (/bonus|bonif|ppr|plr|13/.test(desc)) return 'Bonificação';
+            return 'Outros';
+        }
+
+        // expense
+        if (/mercado|supermerc|hiper|carrefour|p[aã]o\s+de|hortifrut|assai|atacad|ifood|rappi|uber\s*eat|james|aiq/i.test(desc)) return 'Alimentação';
+        if (/restaura|lanch|pizza|burger|sushi|padaria|cafe|café|starbuck|mcdon|bk\s|subway|habibs/i.test(desc)) return 'Restaurantes';
+        if (/uber|99|cabify|gasolina|combustivel|estacion|pedagio|ipva|seguro\s+veic|metr[oô]|onibus|bilhete|recarga\s+t|posto/i.test(desc)) return 'Transporte';
+        if (/aluguel|condom[ií]nio|iptu|imobili|rent|locacao|prestacao\s+imovel/i.test(desc)) return 'Moradia';
+        if (/luz|[eé]letric|cpfl|enel|celpe|energ|agua|[aá]gua|sabesp|sanepar|caern|gas|g[aá]s|comgas|internet|wifi|claro|vivo|tim|oi\s|net\s|telefo/i.test(desc)) return 'Contas';
+        if (/farm[aá]cia|drogaria|consulta|medic|m[eé]dic|hospital|clinica|cl[ií]nica|dentist|odonto|unimed|sulamerica|bradesco\s+sa[uú]de|hapvida|laborat|exame|sus/i.test(desc)) return 'Saúde';
+        if (/escola|faculdade|universid|curso|udemy|alura|coursera|livro|apostila|mensalidade\s+esc|colegio|creche/i.test(desc)) return 'Educação';
+        if (/netflix|spotify|disney|hbo|prime\s*video|youtube|steam|playstation|xbox|cinema|teatro|show|ingress|deezer|apple\s*music|amazon\s*prime/i.test(desc)) return 'Entretenimento';
+        if (/academia|smart\s*fit|bio\s*ritmo|gympass|total\s*pass|crossfit|pilates|yoga/i.test(desc)) return 'Academia';
+        if (/roupa|calca|camiseta|tenis|sapato|renner|riachuelo|zara|cea|hering|centauro|nike|adidas|shein/i.test(desc)) return 'Roupas';
+        if (/celular|notebook|computador|iphone|samsung|xiaomi|fone|tablet|apple|kabum|americanas|magazine|mercadolivre|shopee|amazon/i.test(desc)) return 'Tecnologia';
+        if (/viagem|hotel|airbnb|booking|passagem|aerea|latam|gol|azul|decolar/i.test(desc)) return 'Viagens';
+        if (/pet|vet|veterinari|ra[çc]ao|cobasi|petz/i.test(desc)) return 'Pets';
+        if (/sal[aã]o|barbearia|cabeleir|manicure|estetica|est[eé]tica|boticario|natura|avon/i.test(desc)) return 'Beleza';
+        if (/seguro|porto\s*seguro|sulamérica|tokio|mapfre|bradesco\s*seg|azul\s*seg|liberty/i.test(desc)) return 'Seguros';
+        if (/imposto|ir\s|irpf|inss|darf|das\s|tribut|taxa\s+gov/i.test(desc)) return 'Impostos';
+        if (/doa[çc][aã]o|igreja|d[ií]zimo|ong|caridade/i.test(desc)) return 'Doações';
+
+        return 'Outros';
+    }
+
+    // ===== Preview de importação =====
+    showBankImportPreview(file, transactions) {
+        this.showBankImportStep(2);
+
+        document.getElementById('importFileInfo').innerHTML =
+            `<i class="fas fa-file-alt"></i> <strong>${this.sanitize(file.name)}</strong> &mdash; ${transactions.length} transações encontradas`;
+
+        document.getElementById('importPreviewTitle').textContent =
+            `${transactions.length} transações encontradas`;
+
+        const list = document.getElementById('importPreviewList');
+        list.innerHTML = transactions.map((t, i) => {
+            const date = new Date(t.date + 'T00:00:00').toLocaleDateString('pt-BR');
+            const amtClass = t.type === 'income' ? 'positive' : 'negative';
+            const sign = t.type === 'income' ? '+' : '-';
+            const catOptions = this.categories[t.type].map(c =>
+                `<option value="${this.sanitize(c)}" ${c === t.category ? 'selected' : ''}>${this.sanitize(c)}</option>`
+            ).join('');
+
+            return `
+                <div class="import-row">
+                    <input type="checkbox" data-import-idx="${i}" checked>
+                    <div class="import-row-info">
+                        <div class="import-row-desc" title="${this.sanitize(t.originalMemo)}">${this.sanitize(t.description)}</div>
+                        <div class="import-row-meta">${date}</div>
+                    </div>
+                    <div class="import-row-amount ${amtClass}">${sign} ${this.formatCurrency(t.amount)}</div>
+                    <div class="import-row-cat">
+                        <select data-cat-idx="${i}">${catOptions}</select>
+                    </div>
+                </div>`;
+        }).join('');
+
+        // Eventos de checkbox e seletor de categoria
+        list.querySelectorAll('input[type="checkbox"]').forEach(cb => {
+            cb.addEventListener('change', () => this.updateImportSummary());
+        });
+        list.querySelectorAll('select[data-cat-idx]').forEach(sel => {
+            sel.addEventListener('change', (e) => {
+                this.parsedBankTransactions[parseInt(e.target.dataset.catIdx)].category = e.target.value;
+            });
+        });
+
+        this.updateImportSummary();
+    }
+
+    updateImportSummary() {
+        const checks = document.querySelectorAll('#importPreviewList input[type="checkbox"]');
+        let income = 0, expense = 0, count = 0;
+
+        checks.forEach((cb, i) => {
+            if (cb.checked) {
+                const t = this.parsedBankTransactions[i];
+                if (t.type === 'income') income += t.amount;
+                else expense += t.amount;
+                count++;
+            }
+        });
+
+        document.getElementById('importSummary').innerHTML = `
+            <span class="income-val"><i class="fas fa-arrow-up"></i> ${this.formatCurrency(income)}</span>
+            <span class="expense-val"><i class="fas fa-arrow-down"></i> ${this.formatCurrency(expense)}</span>
+            <span class="total-val">${count} selecionadas</span>`;
+    }
+
+    confirmBankImport() {
+        const checks = document.querySelectorAll('#importPreviewList input[type="checkbox"]');
+        let imported = 0;
+
+        checks.forEach((cb, i) => {
+            if (!cb.checked) return;
+            const t = this.parsedBankTransactions[i];
+            this.transactions.push({
+                id: Date.now().toString() + Math.random().toString(36).substr(2, 5) + i,
+                type: t.type,
+                amount: t.amount,
+                category: t.category,
+                description: t.description,
+                date: t.date,
+                tags: ['extrato-bancário'],
+                createdAt: new Date().toISOString()
+            });
+            imported++;
+        });
+
+        if (imported > 0) {
+            this.saveTransactions();
+            this.updateDisplay();
+            this.showNotification(`${imported} transações importadas do extrato!`, 'success');
+        }
+
+        this.closeModal('bankImportModal');
     }
 }
 

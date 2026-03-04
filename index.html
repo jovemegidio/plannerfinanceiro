@@ -58,8 +58,11 @@
                 <button id="exportPdfBtn" class="btn btn-secondary" aria-label="Imprimir / Exportar PDF">
                     <i class="fas fa-file-pdf"></i> <span class="btn-text">PDF</span>
                 </button>
-                <button id="importBtn" class="btn btn-secondary" aria-label="Importar dados">
-                    <i class="fas fa-upload"></i> <span class="btn-text">Importar</span>
+                <button id="importBtn" class="btn btn-secondary" aria-label="Importar JSON">
+                    <i class="fas fa-upload"></i> <span class="btn-text">JSON</span>
+                </button>
+                <button id="importBankBtn" class="btn btn-bank" aria-label="Importar extrato bancário OFX/CSV">
+                    <i class="fas fa-university"></i> <span class="btn-text">Extrato OFX/CSV</span>
                 </button>
             </div>
         </div>
@@ -420,6 +423,65 @@
                 </div>
             </form>
             <div class="modal-list" id="categoriesModalList"></div>
+        </div>
+    </div>
+
+    <!-- Modal: Importar Extrato Bancário -->
+    <div id="bankImportModal" class="modal" role="dialog" aria-modal="true" aria-labelledby="bankImportModalTitle">
+        <div class="modal-content modal-lg">
+            <div class="modal-header modal-header-bank">
+                <h2 id="bankImportModalTitle"><i class="fas fa-university"></i> Importar Extrato Bancário</h2>
+                <button class="close" aria-label="Fechar" data-modal="bankImportModal">&times;</button>
+            </div>
+            <div class="bank-import-body">
+                <div class="import-step" id="importStep1">
+                    <div class="import-instructions">
+                        <h3>Como exportar seu extrato</h3>
+                        <div class="bank-guide-grid">
+                            <div class="bank-guide">
+                                <div class="bank-guide-icon"><i class="fas fa-file-code"></i></div>
+                                <h4>Arquivo OFX</h4>
+                                <p>A maioria dos bancos (Itaú, Bradesco, BB, Santander, Nubank) permite exportar extratos em formato OFX no internet banking.</p>
+                                <small>Vá em Extrato → Exportar → OFX/Money</small>
+                            </div>
+                            <div class="bank-guide">
+                                <div class="bank-guide-icon"><i class="fas fa-file-csv"></i></div>
+                                <h4>Arquivo CSV</h4>
+                                <p>Alternativa universal. Deve conter colunas de data, descrição e valor. Separador: vírgula ou ponto-e-vírgula.</p>
+                                <small>Vá em Extrato → Exportar → CSV/Excel</small>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="import-dropzone" id="importDropzone">
+                        <i class="fas fa-cloud-upload-alt"></i>
+                        <p><strong>Arraste o arquivo aqui</strong></p>
+                        <p>ou clique para selecionar</p>
+                        <small>Formatos: .ofx .csv (máx. 5MB)</small>
+                        <input type="file" id="bankFileInput" accept=".ofx,.csv" hidden>
+                    </div>
+                </div>
+
+                <div class="import-step" id="importStep2" style="display: none;">
+                    <div class="import-file-info" id="importFileInfo"></div>
+                    <div class="import-preview-header">
+                        <h3 id="importPreviewTitle">Transações encontradas</h3>
+                        <div class="import-actions-inline">
+                            <label class="import-toggle">
+                                <input type="checkbox" id="importSelectAll" checked>
+                                <span>Selecionar todas</span>
+                            </label>
+                        </div>
+                    </div>
+                    <div class="import-preview-list" id="importPreviewList"></div>
+                    <div class="import-summary" id="importSummary"></div>
+                    <div class="form-actions">
+                        <button type="button" class="btn btn-secondary" id="importBackBtn">Voltar</button>
+                        <button type="button" class="btn btn-bank" id="importConfirmBtn">
+                            <i class="fas fa-check"></i> Importar Selecionadas
+                        </button>
+                    </div>
+                </div>
+            </div>
         </div>
     </div>
 
